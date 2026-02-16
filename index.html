@@ -3,89 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>寶可夢記憶翻翻樂 - 靜音功能版</title>
+    <title>寶可夢翻翻樂 - 專業分榜版</title>
     <style>
-        :root { --poke-blue: #3D7DCA; --poke-yellow: #FFCB05; --poke-red: #EE1515; --bg: #f4f7f6; }
-        body { font-family: 'PingFang TC', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; margin: 0; padding-bottom: 50px; }
-        h1 { color: var(--poke-blue); text-shadow: 2px 2px var(--poke-yellow); }
+        :root { --poke-blue: #3D7DCA; --poke-yellow: #FFCB05; --bg: #f4f7f6; }
+        body { font-family: 'PingFang TC', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; margin: 0; padding-bottom: 50px; overflow-x: hidden; }
         
-        /* 音量按鈕 */
-        #mute-btn {
-            position: fixed; top: 20px; right: 20px; z-index: 200;
-            width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--poke-blue);
-            background: white; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;
+        /* 黑夜模式：範圍擴大至 180px */
+        body.dark-mode::after {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle 180px at var(--x, 50%) var(--y, 50%), transparent 80%, rgba(0,0,0,0.95) 100%);
+            pointer-events: none; z-index: 1000;
         }
-        #mute-btn:hover { transform: scale(1.1); }
 
-        .controls { margin: 10px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-        button.lv-btn {
-            padding: 8px 15px; border: 2px solid var(--poke-blue); background: white;
-            color: var(--poke-blue); font-weight: bold; border-radius: 20px; cursor: pointer;
-        }
-        button.lv-btn.active { background: var(--poke-blue); color: white; }
-
-        .dashboard { background: white; padding: 10px 25px; border-radius: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { color: var(--poke-blue); text-shadow: 2px 2px var(--poke-yellow); margin: 10px 0; }
         
-        #game-grid { display: grid; gap: 8px; padding: 10px; max-width: 95vw; }
+        /* 音樂播放器 */
+        .music-panel {
+            background: white; padding: 10px 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px; width: 320px; text-align: center;
+        }
+        .song-title { font-weight: bold; color: var(--poke-blue); margin-bottom: 5px; font-size: 14px; }
+        .progress-container { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+        input[type="range"] { flex: 1; cursor: pointer; }
+        .music-btns { display: flex; justify-content: center; gap: 15px; margin-top: 8px; }
+        .m-btn { background: none; border: 1px solid #ddd; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; font-size: 16px; }
 
-        .card { width: 80px; height: 80px; position: relative; transform-style: preserve-3d; transition: transform 0.4s; cursor: pointer; }
+        .controls { margin-bottom: 5px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .lv-btn { padding: 6px 12px; border: 2px solid var(--poke-blue); background: white; border-radius: 15px; cursor: pointer; font-weight: bold; }
+        .lv-btn.active { background: var(--poke-blue); color: white; }
+        
+        .mode-section { background: #eee; padding: 10px; border-radius: 15px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        .mode-toggle { padding: 6px 15px; border-radius: 15px; border: none; cursor: pointer; font-weight: bold; background: #bbb; color: white; }
+        .mode-toggle.on { background: #2ed573; }
+        .note { font-size: 11px; color: #666; margin-top: 4px; }
+
+        .dashboard { background: white; padding: 8px 20px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        #game-grid { display: grid; gap: 8px; padding: 10px; transition: transform 0.2s; }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(-5px, 5px); } 50% { transform: translate(5px, -5px); } 75% { transform: translate(-5px, -5px); } 100% { transform: translate(0,0); } }
+
+        .card { width: 75px; height: 75px; position: relative; transform-style: preserve-3d; transition: transform 0.4s; cursor: pointer; }
         .card.small { width: 60px; height: 60px; }
-        .card.tiny { width: 50px; height: 50px; }
-        
+        .card.tiny { width: 48px; height: 48px; }
         .card.flipped, .card.matched { transform: rotateY(180deg); }
-        .card.matched { cursor: default; }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 8px; border: 2px solid #fff; }
+        .card-back { background: var(--poke-blue); }
+        .card-front { background: white; transform: rotateY(180deg); display: flex; align-items: center; justify-content: center; }
+        .card-front img { width: 90%; height: 90%; object-fit: contain; }
 
-        .card-front, .card-back {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            border-radius: 8px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .card-back { background: var(--poke-blue); z-index: 2; }
-        .card-front { 
-            background: white; transform: rotateY(180deg); 
-            display: flex; align-items: center; justify-content: center; z-index: 1;
-        }
-
-        .card.flipped .card-front, .card.matched .card-front { z-index: 3; }
-        .card-front img { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
-
-        #msg-overlay {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.85); color: white; padding: 30px 50px;
-            border-radius: 15px; font-size: 1.8rem; display: none; z-index: 100; text-align: center;
-        }
-
-        .rank-container { margin: 20px; background: white; padding: 15px; border-radius: 15px; width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .rank-container { margin-top: 20px; background: white; padding: 15px; border-radius: 15px; width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .rank-header { font-weight: bold; color: var(--poke-blue); text-align: center; margin-bottom: 10px; border-bottom: 2px solid var(--poke-yellow); padding-bottom: 5px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 14px; }
     </style>
 </head>
-<body onclick="startBGM()">
-
-    <button id="mute-btn" onclick="toggleMute(event)">🔊</button>
+<body onmousemove="updateLight(event)" onclick="initAudio()">
 
     <h1>寶可夢翻翻樂</h1>
 
-    <audio id="bgm" loop>
-        <source src="bga1.mp3" type="audio/mpeg">
-    </audio>
+    <div class="music-panel">
+        <div class="song-title" id="song-display">點擊頁面開始播放</div>
+        <div class="progress-container">
+            <span id="cur-time">0:00</span>
+            <input type="range" id="progress-bar" value="0" step="1">
+            <span id="dur-time">0:00</span>
+        </div>
+        <div class="music-btns">
+            <button class="m-btn" onclick="prevSong(event)">⏮️</button>
+            <button class="m-btn" onclick="toggleMute(event)" id="mute-btn">🔊</button>
+            <button class="m-btn" onclick="nextSong(event)">⏭️</button>
+        </div>
+    </div>
+
+    <audio id="bgm"></audio>
 
     <div class="controls">
-        <button class="lv-btn" onclick="changeLevel(0)" id="b0">Lv1 (16張)</button>
-        <button class="lv-btn" onclick="changeLevel(1)" id="b1">Lv2 (24張)</button>
-        <button class="lv-btn" onclick="changeLevel(2)" id="b2">Lv3 (32張)</button>
-        <button class="lv-btn" onclick="changeLevel(3)" id="b3">Lv4 (40張)</button>
-        <button class="lv-btn" onclick="changeLevel(4)" id="b4">Lv5 (60張)</button>
+        <button class="lv-btn" onclick="changeLevel(0)" id="b0">Lv1</button>
+        <button class="lv-btn" onclick="changeLevel(1)" id="b1">Lv2</button>
+        <button class="lv-btn" onclick="changeLevel(2)" id="b2">Lv3</button>
+        <button class="lv-btn" onclick="changeLevel(3)" id="b3">Lv4</button>
+        <button class="lv-btn" onclick="changeLevel(4)" id="b4">Lv5</button>
+    </div>
+
+    <div class="mode-section">
+        <div style="text-align:center">
+            <button class="mode-toggle" id="dark-toggle" onclick="toggleMode('dark')">黑夜模式</button>
+        </div>
+        <div style="text-align:center">
+            <button class="mode-toggle" id="shake-toggle" onclick="toggleMode('shake')">地震模式</button>
+            <div class="note">每 10 秒震動並打亂位置</div>
+        </div>
     </div>
 
     <div class="dashboard">
-        ⏳ <span id="timer">0</span> 秒 | ✅ <span id="match-count">0</span> / <span id="target">0</span> 對
+        ⏳ <span id="timer">0</span> 秒 | ✅ <span id="match-count">0</span> / <span id="target">0</span>
     </div>
 
     <div id="game-grid"></div>
-    <div id="msg-overlay"></div>
 
     <div class="rank-container">
-        <h3 style="text-align:center; color:var(--poke-blue); margin-top:0;">🏆 各關前三名紀錄</h3>
+        <div class="rank-header" id="rank-title">一般模式排行榜</div>
         <div id="rank-list"></div>
     </div>
 
@@ -95,66 +112,88 @@
             '水君1.png', '火伊布1.png', '仙子伊布1.png', '皮卡丘1.png', '伊布1.png',
             '冰伊布1.png', '克雷色利亞1.png', '利歐路1.png', '妙蛙種子1.png', '固拉多1.png',
             '帕奇利茲1.png', '帕路奇亞1.png', '炎帝1.png', '阿爾宙斯1.png', '帝牙盧卡1.png',
-            '波加曼1.png', '草苗龜1.png', '雷伊布1.png', '葉伊布1.png', '路卡利歐1.png',
-            '達克萊伊1.png', '電擊魔獸1.png', '鳳王1.png', '瑪納霏1.png', '騎拉帝納1.png'
+            '烈空坐1.png', '索爾迦雷歐1.png', '雷伊布1.png', '葉伊布1.png', '傑尼龜1.png',
+            '超夢1.png', '雷公1.png', '夢幻1.png', '蓋歐卡1.png', '騎拉帝納1.png'
         ];
 
-        const levels = [
-            { cards: 16, cols: 4, size: '' },
-            { cards: 24, cols: 6, size: '' },
-            { cards: 32, cols: 8, size: 'small' },
-            { cards: 40, cols: 8, size: 'small' },
-            { cards: 60, cols: 10, size: 'tiny' }
-        ];
+        const songNames = ["1. 輕音樂", "2. 尿床怎麼啦", "3. 進擊的巨人主題曲", "4. 最後一次", "5. 致青春", "6. 追追追", "7. 卡農", "8. 父親", "9. 第一隻舞", "10. 世間美好與你環環相扣"];
+        const levels = [{cards:16, cols:4, size:''}, {cards:24, cols:6, size:''}, {cards:32, cols:8, size:'small'}, {cards:40, cols:8, size:'small'}, {cards:60, cols:10, size:'tiny'}];
 
         let currentLv = 0, flipped = [], matches = 0, seconds = 0, timerId = null, lock = false;
-        let bgmStarted = false;
-        let isMuted = false;
+        let currentSongNum = 1, isMuted = false, bgmReady = false;
+        
+        // 模式狀態
+        let modes = { dark: false, shake: false };
+        let shakeTimer = null;
 
-        function toggleMute(e) {
-            if(e) e.stopPropagation(); // 防止觸發 startBGM
-            isMuted = !isMuted;
-            const bgm = document.getElementById('bgm');
-            const btn = document.getElementById('mute-btn');
+        const bgm = document.getElementById('bgm');
+        const prog = document.getElementById('progress-bar');
+
+        // --- 音樂邏輯 ---
+        function initAudio() { if (!bgmReady) { loadSong(1); bgmReady = true; } }
+        function loadSong(num) {
+            currentSongNum = num;
+            bgm.src = `bga${num}.mp3`;
+            document.getElementById('song-display').innerText = songNames[num-1];
+            bgm.play().catch(()=>{});
+        }
+        function nextSong(e) { if(e) e.stopPropagation(); loadSong(currentSongNum >= 10 ? 1 : currentSongNum + 1); }
+        function prevSong(e) { if(e) e.stopPropagation(); loadSong(currentSongNum <= 1 ? 10 : currentSongNum - 1); }
+        function toggleMute(e) { if(e) e.stopPropagation(); isMuted = !isMuted; bgm.muted = isMuted; document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🔊"; }
+        bgm.ontimeupdate = () => {
+            if(!isNaN(bgm.duration)) {
+                prog.max = Math.floor(bgm.duration); prog.value = Math.floor(bgm.currentTime);
+                document.getElementById('cur-time').innerText = formatTime(bgm.currentTime);
+                document.getElementById('dur-time').innerText = "-" + formatTime(bgm.duration - bgm.currentTime);
+            }
+        };
+        prog.oninput = () => { bgm.currentTime = prog.value; };
+        function formatTime(s) { let m = Math.floor(s/60), sec = Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; }
+
+        // --- 模式切換 ---
+        function toggleMode(type) {
+            modes[type] = !modes[type];
+            document.getElementById(`${type}-toggle`).classList.toggle('on', modes[type]);
+            if(type === 'dark') document.body.classList.toggle('dark-mode', modes.dark);
             
-            bgm.muted = isMuted;
-            btn.innerText = isMuted ? "🔇" : "🔊";
+            // 如果是在遊戲中切換地震
+            if(type === 'shake') {
+                clearInterval(shakeTimer);
+                if(modes.shake && timerId) shakeTimer = setInterval(earthquake, 10000);
+            }
+            showRank(); // 切換模式時更新排行榜顯示
         }
 
-        function startBGM() {
-            if (!bgmStarted) {
-                const bgm = document.getElementById('bgm');
-                bgm.play().then(() => {
-                    bgmStarted = true;
-                    bgm.muted = isMuted;
-                }).catch(e => {});
+        function updateLight(e) {
+            if(modes.dark) {
+                document.body.style.setProperty('--x', e.clientX + 'px');
+                document.body.style.setProperty('--y', e.clientY + 'px');
             }
         }
 
-        function playSuccessSound() {
-            if (isMuted) return; // 靜音時不播放特效音
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator(), g = ctx.createGain();
-                o.type = 'sine'; o.connect(g); g.connect(ctx.destination);
-                o.start(); 
-                [523.25, 659.25, 783.99].forEach((f, i) => o.frequency.setValueAtTime(f, ctx.currentTime + i * 0.1));
-                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-                o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
+        function earthquake() {
+            const grid = document.getElementById('game-grid');
+            grid.classList.add('shake');
+            setTimeout(() => {
+                grid.classList.remove('shake');
+                let cards = Array.from(grid.children);
+                cards.sort(() => Math.random() - 0.5);
+                cards.forEach(c => grid.appendChild(c));
+            }, 500);
         }
 
+        // --- 核心遊戲 ---
         function setupGame() {
             const conf = levels[currentLv];
             const grid = document.getElementById('game-grid');
             grid.innerHTML = ''; flipped = []; matches = 0; seconds = 0; lock = false;
-            if(timerId) clearInterval(timerId); timerId = null;
+            clearInterval(timerId); timerId = null;
+            clearInterval(shakeTimer);
             
             document.getElementById('timer').innerText = '0';
             document.getElementById('match-count').innerText = '0';
             document.getElementById('target').innerText = conf.cards / 2;
-            const btns = document.querySelectorAll('.lv-btn');
-            btns.forEach((b, i) => b.classList.toggle('active', i === currentLv));
+            document.querySelectorAll('.lv-btn').forEach((b, i) => b.classList.toggle('active', i === currentLv));
 
             let selected = imgNames.slice(0, conf.cards / 2);
             let deck = [...selected, ...selected].sort(() => Math.random() - 0.5);
@@ -164,11 +203,13 @@
                 const card = document.createElement('div');
                 card.className = `card ${conf.size}`;
                 card.dataset.img = name;
-                card.innerHTML = `<div class="card-back"></div><div class="card-front"><img src="${name}"></div>`;
+                card.innerHTML = `<div class="card-back"></div><div class="card-front"><img src="${name}" onerror="this.src='https://via.placeholder.com/50?text=Err'"></div>`;
                 card.onclick = () => {
-                    startBGM();
                     if (lock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
-                    if (!timerId) timerId = setInterval(() => { seconds++; document.getElementById('timer').innerText = seconds; }, 1000);
+                    if (!timerId) {
+                        timerId = setInterval(() => { seconds++; document.getElementById('timer').innerText = seconds; }, 1000);
+                        if(modes.shake) shakeTimer = setInterval(earthquake, 10000);
+                    }
                     card.classList.add('flipped');
                     flipped.push(card);
                     if (flipped.length === 2) check();
@@ -182,58 +223,64 @@
             lock = true;
             const [c1, c2] = flipped;
             if (c1.dataset.img === c2.dataset.img) {
-                c1.classList.replace('flipped', 'matched');
-                c2.classList.replace('flipped', 'matched');
-                matches++;
-                document.getElementById('match-count').innerText = matches;
-                playSuccessSound();
-                flipped = [];
-                lock = false;
-                if (matches === levels[currentLv].cards / 2) handleVictory();
+                setTimeout(() => {
+                    c1.classList.replace('flipped', 'matched');
+                    c2.classList.replace('flipped', 'matched');
+                    matches++;
+                    document.getElementById('match-count').innerText = matches;
+                    flipped = []; lock = false;
+                    if (matches === levels[currentLv].cards / 2) handleVictory();
+                }, 300);
             } else {
                 setTimeout(() => {
                     c1.classList.remove('flipped');
                     c2.classList.remove('flipped');
-                    flipped = [];
-                    lock = false;
+                    flipped = []; lock = false;
                 }, 800);
             }
         }
 
+        function getRankKey() {
+            let modeName = "normal";
+            if(modes.dark && modes.shake) modeName = "chaos"; // 雙開模式
+            else if(modes.dark) modeName = "dark";
+            else if(modes.shake) modeName = "shake";
+            return `poke_rank_${modeName}_lv${currentLv}`;
+        }
+
         function handleVictory() {
             clearInterval(timerId);
-            const storageKey = `poke_rank_vfinal_lv${currentLv}`;
-            let scores = JSON.parse(localStorage.getItem(storageKey) || "[]");
-            const isTop3 = scores.length < 3 || seconds < scores[scores.length - 1].sec;
-
-            if (isTop3) {
+            clearInterval(shakeTimer);
+            const key = getRankKey();
+            let scores = JSON.parse(localStorage.getItem(key) || "[]");
+            
+            const isTop = scores.length < 3 || seconds < scores[scores.length - 1].sec;
+            if (isTop) {
                 setTimeout(() => {
-                    let name = "";
-                    while (true) {
-                        name = prompt(`🏆 破紀錄！${seconds}秒！\n請輸入你的名字：`) || "匿名挑戰者";
-                        const trimmedName = name.trim();
-                        if (trimmedName === "") { alert("名字不能為空喔！"); continue; }
-                        if (scores.some(s => s.name === trimmedName)) { alert("這個名字已經有人用過囉！"); continue; }
-                        name = trimmedName;
-                        break;
-                    }
-                    scores.push({ name: name, sec: seconds });
+                    let name = prompt(`🏆 破紀錄！(${seconds}秒)\n請輸入名字：`) || "匿名";
+                    scores.push({ name, sec: seconds });
                     scores.sort((a, b) => a.sec - b.sec);
-                    localStorage.setItem(storageKey, JSON.stringify(scores.slice(0, 3)));
+                    localStorage.setItem(key, JSON.stringify(scores.slice(0, 3)));
                     setupGame();
                 }, 300);
             } else {
-                const msg = document.getElementById('msg-overlay');
-                msg.innerHTML = `恭喜破關！<br>成績：${seconds} 秒`;
-                msg.style.display = 'block';
-                setTimeout(() => { msg.style.display = 'none'; setupGame(); }, 2000);
+                alert(`恭喜完成！時間：${seconds}秒`);
+                setupGame();
             }
         }
 
         function showRank() {
+            const key = getRankKey();
+            const title = document.getElementById('rank-title');
+            let label = "一般模式";
+            if(modes.dark && modes.shake) label = "混沌(黑夜+地震)";
+            else if(modes.dark) label = "黑夜模式";
+            else if(modes.shake) label = "地震模式";
+            
+            title.innerText = `${label} 排行榜`;
+            const scores = JSON.parse(localStorage.getItem(key) || "[]");
             const list = document.getElementById('rank-list');
-            const scores = JSON.parse(localStorage.getItem(`poke_rank_vfinal_lv${currentLv}`) || "[]");
-            list.innerHTML = scores.length ? scores.map((s, i) => `<div class="rank-item"><span>${i+1}. ${s.name}</span><b>${s.sec}s</b></div>`).join('') : "<p style='text-align:center; color:#888;'>尚無紀錄</p>";
+            list.innerHTML = scores.length ? scores.map((s, i) => `<div class="rank-item"><span>${i+1}. ${s.name}</span><b>${s.sec}s</b></div>`).join('') : "暫無紀錄";
         }
 
         function changeLevel(i) { currentLv = i; setupGame(); }
